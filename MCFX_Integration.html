@@ -1,0 +1,72 @@
+<script> 
+	function getCookie(name) {
+		match = document.cookie.match( new RegExp( name + '=([^;]+)' ) );
+
+		if( match && name == 'fx_info' ) {
+			cookie = decodeURIComponent( match[1] );
+			return JSON.parse( cookie );
+		}
+		else if( match && name == 'gclid' ) {
+			return match[1];
+		}
+	}
+
+    //for pages where we do not have PHP access, only runs on the specific page where the Schedule plugin exists
+    if(typeof document.getElementsByClassName('page-id-788')[0] !== 'undefined'){
+        //waits until the save to calendar button appears to call mcfxSubmit()
+        var timer = window.setInterval(function(){
+
+            var button = document.getElementById("iFrameResizer0").contentDocument.getElementsByClassName("md-button calendar-save md-raised md-primary md-theme-default")[0];
+            if(typeof button !== 'undefined'){
+                clearInterval(timer);
+                mcfxSubmit();
+                return;
+            }
+
+        }, 1000);
+    }
+
+	function mcfxSubmit(){
+		
+		var $form = jQuery( '<form></form>' );
+
+		//gets the iframe contents after the save to calendar button appears
+		const confirmationIframe = jQuery( '#iFrameResizer0' ).contents();
+		
+		var date = confirmationIframe.find('span.appointment-start-d')[0].innerHTML.trim();
+		var startTime = confirmationIframe.find('span.appointment-start-t')[0].innerHTML.trim();
+		var endTime = confirmationIframe.find('span.appointment-end-t')[0].innerHTML.trim();
+		
+		$form.append( '<input type="hidden" name="date" value="' + date + '">' );
+		$form.append( '<input type="hidden" name="start-time" value="' + startTime + '">' );
+		$form.append( '<input type="hidden" name="end-time" value="' + endTime + '">' );
+
+		const cardContent = confirmationIframe.find('.md-card-content')[0];
+
+		//loops through the cards contents and splits it based on the Field Name and its Value, denoted by the colon
+		for (let i = 0; i < cardContent.children.length - 1; i++) {
+			var formFieldArray = cardContent.children[i].innerText.split(': ');
+			$form.append('<input type="hidden" name="' + formFieldArray[0].toLowerCase() +'" value="' + formFieldArray[1] + '">' );
+		}
+
+		var infoCookie = getCookie("fx_info");
+		var adCookie = getCookie('gclid');
+		$form.append( '<input type="hidden" name="lead_source" value="' + infoCookie.source + '">' );
+		$form.append( '<input type="hidden" name="lead_medium" value="' + infoCookie.medium + '">' );
+		$form.append( '<input type="hidden" name="lead_referrer" value="' + infoCookie.referrer + '">' );
+		
+		if(adCookie != null){
+			$form.append( '<input type="hidden" name="ad-id" value="' + adCookie + '">' );
+		}
+
+        //needs to be changed per client
+		if ( typeof MCFX !== 'undefined' ) {
+			MCFX.Form.setup( $form.get( 0 ), {
+                'leadType' : 'Schedule a Call',
+                'id' : '5fee2ad9a3d13b06d8289d2b'
+			});
+			MCFX.Cookie.get('fx_info');
+			MCFX.Form.submit( $form.get( 0 ) );
+		}
+	}
+</script>
